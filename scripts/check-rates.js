@@ -33,11 +33,25 @@ const PAIR_LABELS = {
 };
 
 async function updatePrices(prices) {
+  // 前回値を先に読み込んでから今回値を書き込む（▲▼表示をアプリ再起動後も正しく出すため）
+  const pairs = Object.keys(prices);
+  const existingSnaps = await Promise.all(
+    pairs.map((pair) => db.collection("prices").doc(pair).get())
+  );
+
   const batch = db.batch();
-  for (const [pair, price] of Object.entries(prices)) {
+  pairs.forEach((pair, i) => {
+    const price = prices[pair];
+    const existing = existingSnaps[i].exists ? existingSnaps[i].data() : null;
+    const previousPrice = existing ? existing.price : null;
+
     const ref = db.collection("prices").doc(pair);
-    batch.set(ref, { price, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
-  }
+    batch.set(ref, {
+      price,
+      previousPrice,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+  });
   await batch.commit();
 }
 

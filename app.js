@@ -23,7 +23,6 @@ const WORKFLOW_URLS = {
 };
 
 let currentDirection = "above";
-let lastPrices = {}; // pair -> previous price, for up/down delta arrows in this session
 let pricesData = {}; // pair -> { price, deltaClass, deltaText, updatedAt }
 let anomaliesData = {}; // pair -> { weekdayStats }
 const expandedAnomalyPairs = new Set(); // 開いているアノマリーパネルのpairを記憶
@@ -73,17 +72,18 @@ function listenToPrices() {
 
     snap.docs.forEach((doc) => {
       const pair = doc.id;
-      const price = Number(doc.data().price);
-      const prev = lastPrices[pair];
+      const data = doc.data();
+      const price = Number(data.price);
+      const prev = typeof data.previousPrice === "number" ? data.previousPrice : null;
+
       let deltaClass = "delta-flat";
       let deltaText = "—";
-      if (typeof prev === "number") {
+      if (prev !== null) {
         if (price > prev) { deltaClass = "delta-up"; deltaText = "▲"; }
         else if (price < prev) { deltaClass = "delta-down"; deltaText = "▼"; }
         else { deltaText = "・"; }
       }
-      lastPrices[pair] = price;
-      pricesData[pair] = { price, deltaClass, deltaText, updatedAt: doc.data().updatedAt };
+      pricesData[pair] = { price, deltaClass, deltaText, updatedAt: data.updatedAt };
     });
 
     renderBoard();
