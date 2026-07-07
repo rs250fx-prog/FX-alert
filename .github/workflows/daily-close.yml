@@ -1,0 +1,30 @@
+name: Record Daily Close & Anomalies
+
+on:
+  schedule:
+    # UTC 21:00 = 日本時間 翌朝6:00（NYクローズ後を「その日の終値」として記録）
+    - cron: "0 21 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  record-daily-close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm install
+
+      - name: Record daily close and recompute anomalies
+        working-directory: scripts
+        env:
+          CURRENCYFREAKS_API_KEY: ${{ secrets.CURRENCYFREAKS_API_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node record-daily-close.js

@@ -1,0 +1,31 @@
+name: Check FX Rates
+
+on:
+  schedule:
+    # 毎時0分に実行（UTC基準。GitHub Actionsのcronは数分遅延することがあります）
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+    # ↑ Actionsタブから手動実行もできるようにしておく（動作確認用）
+
+jobs:
+  check-rates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm install
+
+      - name: Run rate check
+        working-directory: scripts
+        env:
+          CURRENCYFREAKS_API_KEY: ${{ secrets.CURRENCYFREAKS_API_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node check-rates.js

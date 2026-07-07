@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 匿名認証済みのクライアント（＝自分のアプリ）だけが読み書きできる。
+    // GitHub Actions側はAdmin SDKを使うため、このルールの影響を受けず常に書き込み可能。
+
+    match /prices/{pair} {
+      allow read: if request.auth != null;
+      allow write: if false; // クライアントからは書き込ませない（Admin SDK専用）
+    }
+
+    match /alerts/{alertId} {
+      allow read, create, update, delete: if request.auth != null;
+    }
+
+    match /history/{entryId} {
+      allow read: if request.auth != null;
+      allow write: if false; // クライアントからは書き込ませない（Admin SDK専用）
+    }
+
+    match /tokens/{tokenId} {
+      allow read: if false; // トークン自体はクライアントから読む必要がない
+      allow create, update: if request.auth != null;
+      allow delete: if false; // 削除はAdmin SDK（無効トークンの掃除）専用
+    }
+
+    match /dailyCloses/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false; // バックフィルスクリプト・日次記録スクリプト（Admin SDK）専用
+    }
+
+    match /anomalies/{pair} {
+      allow read: if request.auth != null;
+      allow write: if false; // アノマリー計算スクリプト（Admin SDK）専用
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "fx-alert-check-rates",
+  "private": true,
+  "version": "1.0.0",
+  "description": "GitHub Actionsから定期実行する為替・金レートチェックスクリプト",
+  "main": "check-rates.js",
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

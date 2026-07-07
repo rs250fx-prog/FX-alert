@@ -1,0 +1,11 @@
+# Firebaseサービスアカウントの秘密鍵（誤ってコミットしないように）
+serviceAccount.json
+*serviceAccount*.json
+
+# Node.js
+node_modules/
+npm-debug.log
+
+# OS
+.DS_Store
+Thumbs.db

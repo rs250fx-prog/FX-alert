@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FX Board</title>
+<meta name="theme-color" content="#12181B">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FX Board">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark"></span>
+    <span class="brand-text">FX BOARD</span>
+  </div>
+  <div class="updated" id="lastUpdated">最終更新 —</div>
+</header>
+
+<main id="main">
+
+  <!-- BOARD VIEW -->
+  <section id="view-board" class="view is-active">
+    <div class="board-list" id="boardList">
+      <!-- rows injected by app.js -->
+      <p class="empty-hint" id="boardEmptyHint">価格を取得中…</p>
+    </div>
+    <p class="section-note">価格は約60分ごとに更新されます（GitHub Actions実行時のみ）。</p>
+  </section>
+
+  <!-- ALERTS VIEW -->
+  <section id="view-alerts" class="view">
+    <div class="alerts-list" id="alertsList">
+      <p class="empty-hint" id="alertsEmptyHint">アラートはまだありません。右下の＋から追加してください。</p>
+    </div>
+  </section>
+
+  <!-- HISTORY VIEW -->
+  <section id="view-history" class="view">
+    <div class="history-list" id="historyList">
+      <p class="empty-hint" id="historyEmptyHint">通知履歴はまだありません。</p>
+    </div>
+  </section>
+
+</main>
+
+<button id="fab" class="fab" aria-label="アラートを追加">＋</button>
+
+<nav class="tabbar" role="tablist">
+  <button class="tab is-active" data-view="board" role="tab" aria-selected="true">
+    <span class="tab-icon" data-icon="board"></span>
+    <span class="tab-label">ボード</span>
+  </button>
+  <button class="tab" data-view="alerts" role="tab" aria-selected="false">
+    <span class="tab-icon" data-icon="alerts"></span>
+    <span class="tab-label">アラート</span>
+  </button>
+  <button class="tab" data-view="history" role="tab" aria-selected="false">
+    <span class="tab-icon" data-icon="history"></span>
+    <span class="tab-label">履歴</span>
+  </button>
+</nav>
+
+<!-- ADD/EDIT ALERT SHEET -->
+<div id="sheetBackdrop" class="sheet-backdrop"></div>
+<div id="addSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet-handle"></div>
+  <h2 id="sheetTitle">アラートを追加</h2>
+
+  <label class="field-label" for="pairSelect">銘柄</label>
+  <select id="pairSelect" class="field-select">
+    <option value="MXNJPY">MXN/JPY（メキシコペソ/円）</option>
+    <option value="USDJPY">USD/JPY（米ドル/円）</option>
+    <option value="XAUUSD">GOLD（金 / USD）</option>
+  </select>
+
+  <label class="field-label">方向</label>
+  <div class="segmented" id="directionSeg">
+    <button type="button" class="seg-btn is-active" data-dir="above">↑ 以上で通知</button>
+    <button type="button" class="seg-btn" data-dir="below">↓ 以下で通知</button>
+  </div>
+
+  <label class="field-label" for="targetInput">指定値</label>
+  <input id="targetInput" class="field-input" type="number" inputmode="decimal" step="0.001" placeholder="例：8.500">
+
+  <div class="sheet-actions">
+    <button id="cancelAlertBtn" class="btn btn-ghost">キャンセル</button>
+    <button id="saveAlertBtn" class="btn btn-primary">保存</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Firebase compat SDK (works reliably with service worker push on iOS Safari PWA) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-messaging-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
