@@ -47,7 +47,9 @@ GitHub Actions（1日1回・daily-close.yml）
 
 ### 3. GitHubリポジトリの作成
 
-1. GitHubで新規リポジトリを作成（Private推奨）
+> ⚠️ 訂正：GitHub Pagesを無料で公開するには、個人の無料プランでは**リポジトリをPublicにする必要があります**（Privateのまま無料公開はできません）。APIキーやサービスアカウント鍵はコードに含めずGitHub Secretsで管理するので、Publicにしても問題ありません。
+
+1. GitHubで新規リポジトリを作成（**Public**）
 2. このプロジェクト一式（`firebase-config.js` を編集済みのもの）をpush
 
 ```bash

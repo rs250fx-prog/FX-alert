@@ -50,6 +50,20 @@
     </div>
   </section>
 
+  <!-- SETTINGS VIEW -->
+  <section id="view-settings" class="view">
+    <div class="settings-list">
+      <button class="settings-item" id="btnUpdatePrices">
+        <span class="settings-item-title">今すぐ価格を更新</span>
+        <span class="settings-item-desc">GitHub Actionsの価格チェックを手動実行します</span>
+      </button>
+      <button class="settings-item" id="btnRecomputeAnomaly">
+        <span class="settings-item-title">曜日アノマリーを再計算</span>
+        <span class="settings-item-desc">終値の記録とアノマリー統計の更新を手動実行します</span>
+      </button>
+    </div>
+  </section>
+
 </main>
 
 <button id="fab" class="fab" aria-label="アラートを追加">＋</button>
@@ -66,6 +80,10 @@
   <button class="tab" data-view="history" role="tab" aria-selected="false">
     <span class="tab-icon" data-icon="history"></span>
     <span class="tab-label">履歴</span>
+  </button>
+  <button class="tab" data-view="settings" role="tab" aria-selected="false">
+    <span class="tab-icon" data-icon="settings"></span>
+    <span class="tab-label">設定</span>
   </button>
 </nav>
 
@@ -98,6 +116,17 @@
 </div>
 
 <div id="toast" class="toast"></div>
+
+<!-- CONFIRM MODAL (settings actions) -->
+<div id="confirmBackdrop" class="sheet-backdrop"></div>
+<div id="confirmSheet" class="sheet sheet-confirm" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="sheet-handle"></div>
+  <h2 id="confirmTitle">確認</h2>
+  <div class="sheet-actions">
+    <button id="confirmCancelBtn" class="btn btn-ghost">キャンセル</button>
+    <button id="confirmExecBtn" class="btn btn-primary">実行</button>
+  </div>
+</div>
 
 <!-- Firebase compat SDK (works reliably with service worker push on iOS Safari PWA) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>

@@ -16,6 +16,12 @@ const PAIR_DECIMALS = {
   XAUUSD: 2
 };
 
+const REPO_URL = "https://github.com/rs250fx-prog/FX-alert";
+const WORKFLOW_URLS = {
+  checkRates: `${REPO_URL}/actions/workflows/check-rates.yml`,
+  dailyClose: `${REPO_URL}/actions/workflows/daily-close.yml`
+};
+
 let currentDirection = "above";
 let lastPrices = {}; // pair -> previous price, for up/down delta arrows in this session
 let pricesData = {}; // pair -> { price, deltaClass, deltaText, updatedAt }
@@ -304,6 +310,42 @@ document.getElementById("saveAlertBtn").addEventListener("click", () => {
   }).catch((err) => {
     console.error("add alert failed", err);
     showToast("追加に失敗しました");
+  });
+});
+
+// ---------- Settings view: confirm modal ----------
+const confirmSheet = document.getElementById("confirmSheet");
+const confirmBackdrop = document.getElementById("confirmBackdrop");
+let pendingConfirmAction = null;
+
+function openConfirm(title, onConfirm) {
+  document.getElementById("confirmTitle").textContent = title;
+  pendingConfirmAction = onConfirm;
+  confirmSheet.classList.add("is-open");
+  confirmBackdrop.classList.add("is-open");
+}
+function closeConfirm() {
+  confirmSheet.classList.remove("is-open");
+  confirmBackdrop.classList.remove("is-open");
+  pendingConfirmAction = null;
+}
+document.getElementById("confirmCancelBtn").addEventListener("click", closeConfirm);
+confirmBackdrop.addEventListener("click", closeConfirm);
+document.getElementById("confirmExecBtn").addEventListener("click", () => {
+  const action = pendingConfirmAction;
+  closeConfirm();
+  if (action) action();
+});
+
+document.getElementById("btnUpdatePrices").addEventListener("click", () => {
+  openConfirm("今すぐ価格を更新しますか？", () => {
+    window.open(WORKFLOW_URLS.checkRates, "_blank");
+  });
+});
+
+document.getElementById("btnRecomputeAnomaly").addEventListener("click", () => {
+  openConfirm("曜日アノマリーを再計算しますか？", () => {
+    window.open(WORKFLOW_URLS.dailyClose, "_blank");
   });
 });
 
