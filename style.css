@@ -126,10 +126,14 @@ main {
 .delta-down { color: var(--rose); background: var(--rose-soft); }
 .delta-flat { color: var(--paper-dim); background: transparent; }
 
-/* ---------- Anomaly panel (inside board row) ---------- */
-.anomaly-toggle {
+/* ---------- Anomaly / Chart panel toggles (inside board row) ---------- */
+.panel-toggle-row {
   grid-column: 1 / -1;
   margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+.anomaly-toggle {
   background: none;
   border: 1px solid var(--line);
   color: var(--paper-dim);
@@ -138,7 +142,6 @@ main {
   padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
-  justify-self: start;
 }
 .anomaly-panel {
   grid-column: 1 / -1;
@@ -147,6 +150,42 @@ main {
   transition: max-height 0.25s ease;
 }
 .anomaly-panel.is-open { max-height: 260px; }
+
+.chart-panel {
+  grid-column: 1 / -1;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+.chart-panel.is-open { max-height: 200px; }
+
+.chart-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 14px 2px 8px;
+  gap: 10px;
+}
+.chart-summary-value {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+}
+.chart-summary-range {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--paper-dim);
+  white-space: nowrap;
+}
+.chart-svg {
+  width: 100%;
+  height: 90px;
+  display: block;
+}
+.chart-line-up { stroke: var(--teal); stroke-width: 1.6; }
+.chart-line-down { stroke: var(--rose); stroke-width: 1.6; }
+.chart-line-up-dot { fill: var(--teal); }
+.chart-line-down-dot { fill: var(--rose); }
 
 .anomaly-empty {
   color: var(--paper-dim);

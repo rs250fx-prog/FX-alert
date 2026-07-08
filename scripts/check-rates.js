@@ -76,6 +76,21 @@ async function updatePrices(prices) {
   await batch.commit();
 }
 
+async function recordIntradayPrices(prices) {
+  // 直近24時間の値動きグラフ表示用に、実行のたびに1件ずつ追記していく。
+  // 削除処理は行わず蓄積する方針（重くなった場合は別途手動掃除スクリプトで対応）。
+  const batch = db.batch();
+  for (const [pair, price] of Object.entries(prices)) {
+    const ref = db.collection("intradayPrices").doc();
+    batch.set(ref, {
+      pair,
+      price,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+  }
+  await batch.commit();
+}
+
 async function getTokens() {
   const snap = await db.collection("tokens").get();
   return snap.docs.map((d) => d.id);
@@ -155,6 +170,7 @@ async function evaluateAlerts(prices, tokens) {
     const prices = await fetchRates(key);
     console.log("取得したレート:", prices);
     await updatePrices(prices);
+    await recordIntradayPrices(prices);
     const tokens = await getTokens();
     await evaluateAlerts(prices, tokens);
     console.log("完了");

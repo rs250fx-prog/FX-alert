@@ -25,7 +25,8 @@ const WORKFLOW_URLS = {
 let currentDirection = "above";
 let pricesData = {}; // pair -> { price, deltaClass, deltaText, updatedAt }
 let anomaliesData = {}; // pair -> { weekdayStats }
-const expandedAnomalyPairs = new Set(); // 開いているアノマリーパネルのpairを記憶
+let intradayData = {}; // pair -> [{ price, millis }, ...] （直近24時間、時刻昇順）
+const expandedPanel = new Map(); // pair -> "anomaly" | "chart"（アコーディオン式、片方だけ開く）
 
 // ---------- Auth ----------
 auth.onAuthStateChanged((user) => {
@@ -42,6 +43,7 @@ auth.onAuthStateChanged((user) => {
 function startApp() {
   listenToPrices();
   listenToAnomalies();
+  listenToIntradayPrices();
   listenToAlerts();
   listenToHistory();
   setupNotifications();
@@ -99,6 +101,33 @@ function listenToAnomalies() {
   }, (err) => console.error("anomalies listener error", err));
 }
 
+// 複合インデックスを避けるため where(pair) は使わず、timestamp降順のみで取得して
+// クライアント側でpairごとに振り分ける（直近24時間分に絞る）。
+const INTRADAY_FETCH_LIMIT = 1200; // 3銘柄 × 15分間隔 × 24時間 に十分な余裕を持たせた件数
+function listenToIntradayPrices() {
+  db.collection("intradayPrices")
+    .orderBy("timestamp", "desc")
+    .limit(INTRADAY_FETCH_LIMIT)
+    .onSnapshot((snap) => {
+      const cutoffMillis = Date.now() - 24 * 60 * 60 * 1000;
+      const byPair = {};
+      snap.docs.forEach((doc) => {
+        const d = doc.data();
+        if (!d.timestamp) return; // サーバータイムスタンプ反映前の一瞬はスキップ
+        const millis = d.timestamp.toMillis();
+        if (millis < cutoffMillis) return;
+        const pair = d.pair;
+        if (!byPair[pair]) byPair[pair] = [];
+        byPair[pair].push({ price: Number(d.price), millis });
+      });
+      Object.keys(byPair).forEach((pair) => {
+        byPair[pair].sort((a, b) => a.millis - b.millis); // 昇順（グラフの左→右）に並べ直す
+      });
+      intradayData = byPair;
+      renderBoard();
+    }, (err) => console.error("intradayPrices listener error", err));
+}
+
 function renderBoard() {
   const list = document.getElementById("boardList");
   const hint = document.getElementById("boardEmptyHint");
@@ -115,6 +144,7 @@ function renderBoard() {
   pairsWithData.forEach((pair) => {
     const decimals = PAIR_DECIMALS[pair] ?? 3;
     const { price, deltaClass, deltaText } = pricesData[pair];
+    const openPanel = expandedPanel.get(pair); // "anomaly" | "chart" | undefined
 
     const row = document.createElement("div");
     row.className = "board-row";
@@ -122,14 +152,24 @@ function renderBoard() {
       <div class="pair-name">${PAIR_LABELS[pair] || pair}</div>
       <div class="pair-price">${price.toFixed(decimals)}</div>
       <div class="pair-delta ${deltaClass}">${deltaText}</div>
-      <button class="anomaly-toggle" data-pair="${pair}">
-        曜日アノマリー ${expandedAnomalyPairs.has(pair) ? "▲" : "▼"}
-      </button>
-      <div class="anomaly-panel ${expandedAnomalyPairs.has(pair) ? "is-open" : ""}" data-pair-panel="${pair}">
+      <div class="panel-toggle-row">
+        <button class="anomaly-toggle" data-pair="${pair}" data-panel="anomaly">
+          曜日アノマリー ${openPanel === "anomaly" ? "▲" : "▼"}
+        </button>
+        <button class="anomaly-toggle" data-pair="${pair}" data-panel="chart">
+          価格推移 ${openPanel === "chart" ? "▲" : "▼"}
+        </button>
+      </div>
+      <div class="anomaly-panel ${openPanel === "anomaly" ? "is-open" : ""}" data-pair-panel="${pair}">
         ${renderAnomalyPanelContent(pair)}
       </div>
+      <div class="chart-panel ${openPanel === "chart" ? "is-open" : ""}" data-pair-chart-panel="${pair}">
+        ${renderChartPanelContent(pair, decimals)}
+      </div>
     `;
-    row.querySelector(".anomaly-toggle").addEventListener("click", () => toggleAnomalyPanel(pair));
+    row.querySelectorAll(".anomaly-toggle").forEach((btn) => {
+      btn.addEventListener("click", () => togglePanel(pair, btn.dataset.panel));
+    });
     list.appendChild(row);
   });
 
@@ -143,11 +183,12 @@ function renderBoard() {
   }
 }
 
-function toggleAnomalyPanel(pair) {
-  if (expandedAnomalyPairs.has(pair)) {
-    expandedAnomalyPairs.delete(pair);
+function togglePanel(pair, panelName) {
+  // 同じパネルをもう一度押したら閉じる。違うパネルを押したら排他的に切り替える。
+  if (expandedPanel.get(pair) === panelName) {
+    expandedPanel.delete(pair);
   } else {
-    expandedAnomalyPairs.add(pair);
+    expandedPanel.set(pair, panelName);
   }
   renderBoard();
 }
@@ -190,6 +231,61 @@ function renderAnomalyPanelContent(pair) {
   return `
     <div class="anomaly-grid">${cols}</div>
     <p class="anomaly-note">曜日別の平均変動率と、上昇した日の割合（勝率）。サンプル数は各曜日で約${Math.max(...stats.map((s) => s.sampleCount))}件。過去の傾向であり将来を保証するものではありません。</p>
+  `;
+}
+
+// ---------- 価格推移パネル（直近24時間・折れ線グラフ） ----------
+const CHART_WIDTH = 300;
+const CHART_HEIGHT = 90;
+const CHART_PAD_X = 4;
+const CHART_PAD_Y = 8;
+
+function renderChartPanelContent(pair, decimals) {
+  const points = intradayData[pair] || [];
+
+  if (points.length < 2) {
+    return `<p class="anomaly-empty">データ収集中です。しばらく運用を続けると（15分ごとの記録が溜まると）表示されます。</p>`;
+  }
+
+  const prices = points.map((p) => p.price);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const range = Math.max(maxPrice - minPrice, 1e-9); // 完全に横一直線の場合のゼロ割回避
+
+  const minMillis = points[0].millis;
+  const maxMillis = points[points.length - 1].millis;
+  const spanMillis = Math.max(maxMillis - minMillis, 1);
+
+  const xFor = (millis) =>
+    CHART_PAD_X + ((millis - minMillis) / spanMillis) * (CHART_WIDTH - CHART_PAD_X * 2);
+  const yFor = (price) =>
+    CHART_HEIGHT - CHART_PAD_Y - ((price - minPrice) / range) * (CHART_HEIGHT - CHART_PAD_Y * 2);
+
+  const pathD = points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${xFor(p.millis).toFixed(1)} ${yFor(p.price).toFixed(1)}`)
+    .join(" ");
+
+  const firstPrice = points[0].price;
+  const lastPrice = points[points.length - 1].price;
+  const isUp = lastPrice >= firstPrice;
+  const lineClass = isUp ? "chart-line-up" : "chart-line-down";
+  const changePct = ((lastPrice - firstPrice) / firstPrice) * 100;
+
+  const lastX = xFor(points[points.length - 1].millis);
+  const lastY = yFor(lastPrice);
+
+  return `
+    <div class="chart-summary">
+      <span class="chart-summary-value ${isUp ? "anomaly-value-up" : "anomaly-value-down"}">
+        ${isUp ? "+" : ""}${changePct.toFixed(2)}%
+      </span>
+      <span class="chart-summary-range">24h High ${maxPrice.toFixed(decimals)} / Low ${minPrice.toFixed(decimals)}</span>
+    </div>
+    <svg class="chart-svg" viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" preserveAspectRatio="none">
+      <path d="${pathD}" class="${lineClass}" fill="none" />
+      <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" class="${lineClass}-dot" />
+    </svg>
+    <p class="anomaly-note">直近24時間の推移（15分間隔の記録ベース）。取得タイミングによって間隔が空くことがあります。</p>
   `;
 }
 
