@@ -1,18 +1,39 @@
-// GitHub Actions から60分ごとに実行されるスクリプト。
-// 1. CurrencyFreaksから為替・金のレートを取得
-// 2. Firestoreの prices コレクションを更新（アプリのボード表示用）
-// 3. Firestoreの alerts を全件チェックし、条件を満たしたものを通知
-// 4. 通知したら notified=true、条件が外れたら notified=false に戻す
-// 5. 通知内容を history コレクションに記録
+// GitHub Actions から15分ごと（平日のみ）に実行されるスクリプト。
+// 1. 実行時刻（分）から4アカウント分のAPIキーを時刻スロット方式で選択
+// 2. CurrencyFreaksから為替・金のレートを取得
+// 3. Firestoreの prices コレクションを更新（アプリのボード表示用）
+// 4. Firestoreの alerts を全件チェックし、条件を満たしたものを通知
+// 5. 通知したら notified=true、条件が外れたら notified=false に戻す
+// 6. 通知内容を history コレクションに記録
+//
+// APIキーのローテーション（fx-alert-spec.md 11章）：
+//   毎時 :03 → KEY_1 / :18 → KEY_2 / :33 → KEY_3 / :48 → KEY_4
+//   各キーは1時間に1回しか呼ばれないため、4キー・15分間隔でも
+//   1キーあたりの消費量は「60分ごと・1キー」構成時と同じ。
+//   状態をFirestore等に持たず、実行時刻の「分」だけから一意にキーを決めるので
+//   1回の実行がスキップされても他のスロットに影響しない。
 
 const admin = require("firebase-admin");
 const { fetchRates } = require("./lib/rates");
 
-const CURRENCYFREAKS_API_KEY = process.env.CURRENCYFREAKS_API_KEY;
+const API_KEYS = [
+  process.env.CURRENCYFREAKS_API_KEY_1,
+  process.env.CURRENCYFREAKS_API_KEY_2,
+  process.env.CURRENCYFREAKS_API_KEY_3,
+  process.env.CURRENCYFREAKS_API_KEY_4
+];
 const FIREBASE_SERVICE_ACCOUNT = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-if (!CURRENCYFREAKS_API_KEY) {
-  console.error("環境変数 CURRENCYFREAKS_API_KEY が設定されていません");
+function selectApiKeyBySlot(date) {
+  const minute = date.getUTCMinutes();
+  // :03, :18, :33, :48 の15分刻みスロットに応じてキーを固定的に割り当てる。
+  // スロットからズレた時刻に実行された場合は直近の過去スロットに丸める。
+  const slotIndex = Math.floor(((minute - 3 + 60) % 60) / 15) % 4;
+  return { key: API_KEYS[slotIndex], slotIndex };
+}
+
+if (API_KEYS.some((k) => !k)) {
+  console.error("環境変数 CURRENCYFREAKS_API_KEY_1〜_4 のいずれかが設定されていません");
   process.exit(1);
 }
 if (!FIREBASE_SERVICE_ACCOUNT) {
@@ -129,7 +150,9 @@ async function evaluateAlerts(prices, tokens) {
 
 (async () => {
   try {
-    const prices = await fetchRates(CURRENCYFREAKS_API_KEY);
+    const { key, slotIndex } = selectApiKeyBySlot(new Date());
+    console.log(`使用キー: KEY_${slotIndex + 1}`);
+    const prices = await fetchRates(key);
     console.log("取得したレート:", prices);
     await updatePrices(prices);
     const tokens = await getTokens();
