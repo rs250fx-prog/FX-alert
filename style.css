@@ -157,7 +157,7 @@ main {
   overflow: hidden;
   transition: max-height 0.25s ease;
 }
-.chart-panel.is-open { max-height: 200px; }
+.chart-panel.is-open { max-height: 260px; }
 
 .chart-summary {
   display: flex;
@@ -177,6 +177,9 @@ main {
   color: var(--paper-dim);
   white-space: nowrap;
 }
+.chart-canvas {
+  position: relative;
+}
 .chart-svg {
   width: 100%;
   height: 90px;
@@ -186,6 +189,41 @@ main {
 .chart-line-down { stroke: var(--rose); stroke-width: 1.6; }
 .chart-line-up-dot { fill: var(--teal); }
 .chart-line-down-dot { fill: var(--rose); }
+
+/* 24h高値・安値マーカー（chart-canvas内に絶対配置、leftは%、topはpx） */
+.chart-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.chart-marker-high { background: var(--teal); }
+.chart-marker-low { background: var(--rose); }
+.chart-marker-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--paper-dim);
+  white-space: nowrap;
+  background: var(--ink-raised);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.chart-marker-high .chart-marker-label { bottom: 10px; }
+.chart-marker-low .chart-marker-label { top: 10px; }
+
+.chart-axis-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--paper-dim);
+}
 
 .anomaly-empty {
   color: var(--paper-dim);

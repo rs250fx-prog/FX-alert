@@ -239,6 +239,16 @@ const CHART_WIDTH = 300;
 const CHART_HEIGHT = 90;
 const CHART_PAD_X = 4;
 const CHART_PAD_Y = 8;
+const CHART_AXIS_LABEL_COUNT = 5; // 時刻軸ラベルの表示数
+
+function formatHHMM(millis) {
+  // 端末のタイムゾーン設定に依らず日本時間で表示する
+  return new Date(millis).toLocaleTimeString("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
 
 function renderChartPanelContent(pair, decimals) {
   const points = intradayData[pair] || [];
@@ -260,6 +270,9 @@ function renderChartPanelContent(pair, decimals) {
     CHART_PAD_X + ((millis - minMillis) / spanMillis) * (CHART_WIDTH - CHART_PAD_X * 2);
   const yFor = (price) =>
     CHART_HEIGHT - CHART_PAD_Y - ((price - minPrice) / range) * (CHART_HEIGHT - CHART_PAD_Y * 2);
+  // オーバーレイ要素（時刻ラベル・高安マーカー）はコンテナ幅に対する%位置とpx高さで配置する
+  // （chart-svgの高さはCSSで90pxに固定しているため、y座標はそのままpx換算できる）
+  const xPctFor = (millis) => ((millis - minMillis) / spanMillis) * 100;
 
   const pathD = points
     .map((p, i) => `${i === 0 ? "M" : "L"} ${xFor(p.millis).toFixed(1)} ${yFor(p.price).toFixed(1)}`)
@@ -274,6 +287,17 @@ function renderChartPanelContent(pair, decimals) {
   const lastX = xFor(points[points.length - 1].millis);
   const lastY = yFor(lastPrice);
 
+  // 24h高値・安値のポイント（複数該当する場合は最初に出現した方を採用）
+  const highPoint = points.find((p) => p.price === maxPrice);
+  const lowPoint = points.find((p) => p.price === minPrice);
+
+  // 時刻軸ラベル（開始〜終了を等間隔でCHART_AXIS_LABEL_COUNT個）
+  const axisLabelsHtml = Array.from({ length: CHART_AXIS_LABEL_COUNT }, (_, i) => {
+    const ratio = i / (CHART_AXIS_LABEL_COUNT - 1);
+    const millis = minMillis + spanMillis * ratio;
+    return `<span>${formatHHMM(millis)}</span>`;
+  }).join("");
+
   return `
     <div class="chart-summary">
       <span class="chart-summary-value ${isUp ? "anomaly-value-up" : "anomaly-value-down"}">
@@ -281,11 +305,20 @@ function renderChartPanelContent(pair, decimals) {
       </span>
       <span class="chart-summary-range">24h High ${maxPrice.toFixed(decimals)} / Low ${minPrice.toFixed(decimals)}</span>
     </div>
-    <svg class="chart-svg" viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" preserveAspectRatio="none">
-      <path d="${pathD}" class="${lineClass}" fill="none" />
-      <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" class="${lineClass}-dot" />
-    </svg>
-    <p class="anomaly-note">直近24時間の推移（15分間隔の記録ベース）。取得タイミングによって間隔が空くことがあります。</p>
+    <div class="chart-canvas">
+      <svg class="chart-svg" viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" preserveAspectRatio="none">
+        <path d="${pathD}" class="${lineClass}" fill="none" />
+        <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" class="${lineClass}-dot" />
+      </svg>
+      <div class="chart-marker chart-marker-high" style="left:${xPctFor(highPoint.millis).toFixed(1)}%; top:${yFor(highPoint.price).toFixed(1)}px;">
+        <span class="chart-marker-label">${formatHHMM(highPoint.millis)}</span>
+      </div>
+      <div class="chart-marker chart-marker-low" style="left:${xPctFor(lowPoint.millis).toFixed(1)}%; top:${yFor(lowPoint.price).toFixed(1)}px;">
+        <span class="chart-marker-label">${formatHHMM(lowPoint.millis)}</span>
+      </div>
+    </div>
+    <div class="chart-axis-labels">${axisLabelsHtml}</div>
+    <p class="anomaly-note">直近24時間の推移（15分間隔の記録ベース、時刻は日本時間）。取得タイミングによって間隔が空くことがあります。</p>
   `;
 }
 
