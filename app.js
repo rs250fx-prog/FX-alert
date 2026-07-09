@@ -291,6 +291,29 @@ function renderChartPanelContent(pair, decimals) {
   const highPoint = points.find((p) => p.price === maxPrice);
   const lowPoint = points.find((p) => p.price === minPrice);
 
+  // マーカーHTMLを生成。ラベルがグラフ領域からはみ出して時刻軸ラベル等と重ならないよう、
+  // 左右の端では端揃えに、上下の端ではラベルの上下位置を反転させる。
+  const EDGE_X_PCT = 12;       // 左右の端とみなす%位置
+  const EDGE_Y_PX = 24;        // 上下の端とみなすpx位置
+  const markerHtml = (point, kind) => {
+    const xPct = xPctFor(point.millis);
+    const y = yFor(point.price);
+
+    const classes = ["chart-marker", `chart-marker-${kind}`];
+    if (xPct < EDGE_X_PCT) classes.push("label-align-left");
+    else if (xPct > 100 - EDGE_X_PCT) classes.push("label-align-right");
+
+    // high は通常ラベルを点の上に出すが、上端に近いときは下に反転。
+    // low は通常ラベルを点の下に出すが、下端に近いとき（時刻軸と重なる位置）は上に反転。
+    if (kind === "high" && y < EDGE_Y_PX) classes.push("label-flip");
+    if (kind === "low" && y > CHART_HEIGHT - EDGE_Y_PX) classes.push("label-flip");
+
+    return `
+      <div class="${classes.join(" ")}" style="left:${xPct.toFixed(1)}%; top:${y.toFixed(1)}px;">
+        <span class="chart-marker-label">${formatHHMM(point.millis)}</span>
+      </div>`;
+  };
+
   // 時刻軸ラベル（開始〜終了を等間隔でCHART_AXIS_LABEL_COUNT個）
   const axisLabelsHtml = Array.from({ length: CHART_AXIS_LABEL_COUNT }, (_, i) => {
     const ratio = i / (CHART_AXIS_LABEL_COUNT - 1);
@@ -310,12 +333,8 @@ function renderChartPanelContent(pair, decimals) {
         <path d="${pathD}" class="${lineClass}" fill="none" />
         <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" class="${lineClass}-dot" />
       </svg>
-      <div class="chart-marker chart-marker-high" style="left:${xPctFor(highPoint.millis).toFixed(1)}%; top:${yFor(highPoint.price).toFixed(1)}px;">
-        <span class="chart-marker-label">${formatHHMM(highPoint.millis)}</span>
-      </div>
-      <div class="chart-marker chart-marker-low" style="left:${xPctFor(lowPoint.millis).toFixed(1)}%; top:${yFor(lowPoint.price).toFixed(1)}px;">
-        <span class="chart-marker-label">${formatHHMM(lowPoint.millis)}</span>
-      </div>
+      ${markerHtml(highPoint, "high")}
+      ${markerHtml(lowPoint, "low")}
     </div>
     <div class="chart-axis-labels">${axisLabelsHtml}</div>
     <p class="anomaly-note">直近24時間の推移（15分間隔の記録ベース、時刻は日本時間）。取得タイミングによって間隔が空くことがあります。</p>

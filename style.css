@@ -216,6 +216,21 @@ main {
 .chart-marker-high .chart-marker-label { bottom: 10px; }
 .chart-marker-low .chart-marker-label { top: 10px; }
 
+/* 端に近いマーカーはラベルを端揃えにして、グラフ領域からのはみ出しを防ぐ */
+.chart-marker.label-align-left .chart-marker-label {
+  left: -3px;
+  transform: none;
+}
+.chart-marker.label-align-right .chart-marker-label {
+  left: auto;
+  right: -3px;
+  transform: none;
+}
+
+/* 上下の端に近いマーカーはラベルの上下位置を反転させて、時刻軸ラベル等との重なりを防ぐ */
+.chart-marker-high.label-flip .chart-marker-label { bottom: auto; top: 10px; }
+.chart-marker-low.label-flip .chart-marker-label { top: auto; bottom: 10px; }
+
 .chart-axis-labels {
   display: flex;
   justify-content: space-between;
