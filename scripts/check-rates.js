@@ -163,19 +163,41 @@ async function evaluateAlerts(prices, tokens) {
   if (batchHasWrites) await batch.commit();
 }
 
-(async () => {
+// 実行の成否を fetchLogs に1件記録する（設定画面のログリスト表示用）。
+// ログ書き込み自体の失敗で本処理を落とさないよう、エラーは握りつぶしてコンソールにだけ出す。
+async function writeFetchLog(status, keyIndex, message) {
   try {
-    const { key, slotIndex } = selectApiKeyBySlot(new Date());
-    console.log(`使用キー: KEY_${slotIndex + 1}`);
+    await db.collection("fetchLogs").add({
+      status, // "success" | "error"
+      keyIndex, // 使用したKEY番号（1〜4）
+      message,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (logErr) {
+    console.error("fetchLogsへの書き込みに失敗しました:", logErr);
+  }
+}
+
+(async () => {
+  const { key, slotIndex } = selectApiKeyBySlot(new Date());
+  const keyNumber = slotIndex + 1;
+  try {
+    console.log(`使用キー: KEY_${keyNumber}`);
     const prices = await fetchRates(key);
     console.log("取得したレート:", prices);
     await updatePrices(prices);
     await recordIntradayPrices(prices);
     const tokens = await getTokens();
     await evaluateAlerts(prices, tokens);
+    await writeFetchLog(
+      "success",
+      keyNumber,
+      `USDJPY ${prices.USDJPY.toFixed(3)} / MXNJPY ${prices.MXNJPY.toFixed(3)} / XAUUSD ${prices.XAUUSD.toFixed(2)}`
+    );
     console.log("完了");
   } catch (err) {
     console.error("実行中にエラーが発生しました:", err);
+    await writeFetchLog("error", keyNumber, String(err?.message || err).slice(0, 500));
     process.exit(1);
   }
 })();

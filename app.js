@@ -46,6 +46,7 @@ function startApp() {
   listenToIntradayPrices();
   listenToAlerts();
   listenToHistory();
+  listenToFetchLogs();
   setupNotifications();
 }
 
@@ -408,6 +409,45 @@ function listenToHistory() {
       list.appendChild(item);
     });
   }, (err) => console.error("history listener error", err));
+}
+
+// ---------- Fetch logs (settings view) ----------
+// 15分間隔×24時間で最大96件程度なので、余裕を持って120件取得し、
+// クライアント側で24時間以内のものだけに絞る。
+function listenToFetchLogs() {
+  db.collection("fetchLogs")
+    .orderBy("timestamp", "desc")
+    .limit(120)
+    .onSnapshot((snap) => {
+      const list = document.getElementById("fetchLogList");
+      const hint = document.getElementById("fetchLogEmptyHint");
+      list.querySelectorAll(".fetchlog-item").forEach((el) => el.remove());
+
+      const cutoffMillis = Date.now() - 24 * 60 * 60 * 1000;
+      const logs = snap.docs
+        .map((doc) => doc.data())
+        .filter((d) => d.timestamp && d.timestamp.toMillis() >= cutoffMillis);
+
+      if (logs.length === 0) {
+        hint.style.display = "block";
+        return;
+      }
+      hint.style.display = "none";
+
+      logs.forEach((log) => {
+        const isSuccess = log.status === "success";
+        const item = document.createElement("div");
+        item.className = `fetchlog-item ${isSuccess ? "is-success" : "is-error"}`;
+        const when = formatDateTime(log.timestamp.toDate());
+        item.innerHTML = `
+          <span class="fetchlog-status">${isSuccess ? "✓" : "✗"}</span>
+          <span class="fetchlog-time">${when}</span>
+          <span class="fetchlog-key">KEY_${log.keyIndex}</span>
+          <span class="fetchlog-message">${isSuccess ? "成功" : `失敗 ${log.message || ""}`}</span>
+        `;
+        list.appendChild(item);
+      });
+    }, (err) => console.error("fetchLogs listener error", err));
 }
 
 // ---------- Add alert sheet ----------

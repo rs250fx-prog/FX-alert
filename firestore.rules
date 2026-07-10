@@ -39,5 +39,10 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if false; // check-rates.js（Admin SDK）専用
     }
+
+    match /fetchLogs/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false; // check-rates.js（Admin SDK）専用
+    }
   }
 }
