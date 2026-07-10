@@ -25,6 +25,6 @@ jobs:
       - name: Record daily close and recompute anomalies
         working-directory: scripts
         env:
-          CURRENCYFREAKS_API_KEY: ${{ secrets.CURRENCYFREAKS_API_KEY }}
+          CURRENCYFREAKS_API_KEY_1: ${{ secrets.CURRENCYFREAKS_API_KEY_1 }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: node record-daily-close.js

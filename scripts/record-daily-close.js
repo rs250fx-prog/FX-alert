@@ -6,11 +6,17 @@ const admin = require("firebase-admin");
 const { fetchRates } = require("./lib/rates");
 const { computeAndStoreAnomalies } = require("./lib/anomaly");
 
-const CURRENCYFREAKS_API_KEY = process.env.CURRENCYFREAKS_API_KEY;
+// 1日1回の実行なのでキーローテーションは不要。KEY_1を固定で使用する。
+// （KEY_1の月間消費：check-rates分 約528回 + daily-close分 約30回 ≒ 560回で無料枠1,000回に余裕あり）
+const CURRENCYFREAKS_API_KEY = process.env.CURRENCYFREAKS_API_KEY_1;
 const FIREBASE_SERVICE_ACCOUNT = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-if (!CURRENCYFREAKS_API_KEY || !FIREBASE_SERVICE_ACCOUNT) {
-  console.error("必要な環境変数が設定されていません");
+if (!CURRENCYFREAKS_API_KEY) {
+  console.error("環境変数 CURRENCYFREAKS_API_KEY_1 が設定されていません");
+  process.exit(1);
+}
+if (!FIREBASE_SERVICE_ACCOUNT) {
+  console.error("環境変数 FIREBASE_SERVICE_ACCOUNT が設定されていません");
   process.exit(1);
 }
 
