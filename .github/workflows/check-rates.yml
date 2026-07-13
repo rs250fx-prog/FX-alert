@@ -1,15 +1,10 @@
 name: Check FX Rates
 
+# 定期実行はGoogle Apps Script（gas/checkRates.gs、時間主導トリガー15分ごと）に移行済み。
+# GitHub Actionsのcron scheduleは無料枠だとベストエフォートで2〜3時間に1回程度しか
+# 発火しないため定期実行には使えなくなった。これは手動実行用のフォールバックとして残す。
 on:
-  schedule:
-    # 4キーローテーション・15分間隔（fx-alert-spec.md 11章）
-    # 毎時 :03/:18/:33/:48 に実行（UTC基準。GitHub Actionsのcronは数分遅延することがあります）
-    # 月〜金（UTC）は終日稼働
-    - cron: "3,18,33,48 * * * 1-5"
-    # 日曜22-23時(UTC)＝月曜7-8時台(JST、シドニー/東京市場の早朝オープン分)もカバー
-    - cron: "3,18,33,48 22,23 * * 0"
   workflow_dispatch: {}
-    # ↑ Actionsタブから手動実行もできるようにしておく（動作確認用）
 
 jobs:
   check-rates:

@@ -1,9 +1,9 @@
 name: Record Daily Close & Anomalies
 
+# 定期実行はGoogle Apps Script（gas/dailyClose.gs、時間主導トリガー・日付ベース・午前6〜7時）に
+# 移行済み。GitHub Actionsのcron scheduleは無料枠だとベストエフォートで発火が安定しないため、
+# これは手動実行用のフォールバックとして残す。
 on:
-  schedule:
-    # UTC 21:00 = 日本時間 翌朝6:00（NYクローズ後を「その日の終値」として記録）
-    - cron: "0 21 * * *"
   workflow_dispatch: {}
 
 jobs:
