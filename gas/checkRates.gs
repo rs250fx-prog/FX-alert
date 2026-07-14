@@ -51,16 +51,27 @@ function checkRates(skipMarketCheck) {
     Logger.log("取得したレート: " + JSON.stringify(prices));
 
     updatePrices_(prices);
-    recordIntradayPrices_(prices);
+
+    // intradayPrices（値動きグラフ用の補助データ）はここで失敗しても、
+    // 本体機能であるアラート判定・通知まで道連れで止めない。
+    // 失敗時はLoggerに出した上で、成功ログのmessageにも失敗した旨を残す。
+    var intradayError = null;
+    try {
+      recordIntradayPrices_(prices);
+    } catch (intradayErr) {
+      intradayError = intradayErr;
+      Logger.log("intradayPricesの書き込みに失敗しました（処理は継続します）: " + intradayErr);
+    }
 
     var tokens = getTokens_();
     evaluateAlerts_(prices, tokens);
 
-    writeFetchLog_(
-      "success",
-      keyNumber,
-      "USDJPY " + prices.USDJPY.toFixed(3) + " / MXNJPY " + prices.MXNJPY.toFixed(3) + " / XAUUSD " + prices.XAUUSD.toFixed(2)
-    );
+    var message =
+      "USDJPY " + prices.USDJPY.toFixed(3) + " / MXNJPY " + prices.MXNJPY.toFixed(3) + " / XAUUSD " + prices.XAUUSD.toFixed(2);
+    if (intradayError) {
+      message += " ※intradayPrices書き込み失敗: " + String((intradayError && intradayError.message) || intradayError).slice(0, 200);
+    }
+    writeFetchLog_("success", keyNumber, message);
     Logger.log("完了");
   } catch (err) {
     Logger.log("実行中にエラーが発生しました: " + err);

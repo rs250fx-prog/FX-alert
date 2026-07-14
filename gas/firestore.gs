@@ -66,10 +66,19 @@ function fsUpdateWrite_(docPath, obj) {
   };
 }
 
-// コレクション配下に自動採番IDでドキュメントを新規作成する（intradayPrices/historyの追記用）。
+// コレクション配下に自動採番IDでドキュメントを新規作成する（intradayPrices/history/fetchLogsの追記用）。
 function fsCreateWrite_(collectionId, obj) {
-  var docPath = collectionId + "/" + Utilities.getUuid();
+  var docPath = collectionId + "/" + generateSortableDocId_();
   return { update: { name: DOCUMENTS_PATH_ + "/" + docPath, fields: toFsFields_(obj) } };
+}
+
+// 作成時刻順にソートされるドキュメントIDを生成する（13桁ゼロ埋めミリ秒 + UUID）。
+// Firestoreコンソールのデフォルトのドキュメント一覧はドキュメントIDの文字列順に並ぶため、
+// 完全ランダムなUUIDだけだと新しく書き込んだドキュメントが一覧のどこに出るか分からず、
+// 「ちゃんと書き込まれ続けているか」を目視で追いにくい。時刻を先頭に付けることでID順=時系列順になる。
+function generateSortableDocId_() {
+  var millis = ("0000000000000" + new Date().getTime()).slice(-13);
+  return millis + "_" + Utilities.getUuid();
 }
 
 // ---------------------------------------------------------------
